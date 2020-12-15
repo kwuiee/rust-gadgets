@@ -1,0 +1,3 @@
+gene	sample	Chromosome/scaffold name	Gene Start (bp)	Gene End (bp)	Strand	Associated Gene Name	Associated Gene Source	Gene type	Description
+ENSG00000000003	19.8957518368247	X	100627109	100639991	-1	TSPAN6	HGNC Symbol	protein_coding	tetraspanin 6 [Source:HGNC Symbol;Acc:HGNC:11858]
+ENSG00000000419	53.0181133173157	20	50934867	50958555	-1	DPM1	HGNC Symbol	protein_coding	dolichyl-phosphate mannosyltransferase subunit 1, catalytic [Source:HGNC Symbol;Acc:HGNC:3005]

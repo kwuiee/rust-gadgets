@@ -1,0 +1,4 @@
+gene	sample	Chromosome/scaffold name	Gene Start (bp)	Gene End (bp)	Strand	Associated Gene Name	Associated Gene Source	Gene type	Description
+ENSG00000002933	40.2134956286289	7	150800403	150805120	1	TMEM176A	HGNC Symbol	protein_coding	transmembrane protein 176A [Source:HGNC Symbol;Acc:HGNC:24930]
+ENSG00000006042	4.84264381993445	17	32927910	32945106	1	TMEM98	HGNC Symbol	protein_coding	transmembrane protein 98 [Source:HGNC Symbol;Acc:HGNC:24529]
+ENSG00000006118	6.14852000742676	11	60924463	60937159	1	TMEM132A	HGNC Symbol	protein_coding	transmembrane protein 132A [Source:HGNC Symbol;Acc:HGNC:31092]
