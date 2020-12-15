@@ -1,4 +1,4 @@
-#![feature(btree_drain_filter, map_first_last)]
+#![feature(btree_drain_filter, map_first_last, with_options)]
 #[macro_use]
 extern crate clap;
 extern crate flate2;
@@ -33,8 +33,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .about(crate_description!())
         .args_from_usage(
             "
-            <read1> -o1=[FILE] 'read1 output path of concated pair'
-            <read2> -o2=[FILE] 'read2 output path of concated pair'
+            <read1> -1=[FILE] 'read1 output path of concated pair'
+            <read2> -2=[FILE] 'read2 output path of concated pair'
             <srcdir> 'fastq pair source directory to concat, fastq glob `*_R[12].fastq.gz` or `*_R[12].fq.gz`'
             ",
         )
@@ -74,8 +74,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         symlink(&pair[&"read2".to_owned()], read2)?;
         return Ok(());
     }
-    let mut stream1 = BufWriter::new(GzEncoder::new(File::create(read1)?, Compression::fast()));
-    let mut stream2 = BufWriter::new(GzEncoder::new(File::create(read2)?, Compression::fast()));
+    let mut stream1 = BufWriter::new(GzEncoder::new(
+        File::with_options().write(true).create(true).open(read1)?,
+        Compression::fast(),
+    ));
+    let mut stream2 = BufWriter::new(GzEncoder::new(
+        File::with_options().write(true).create(true).open(read2)?,
+        Compression::fast(),
+    ));
     for i in collector.values() {
         let mut buffer: Vec<u8> = vec![0; BUFFER_SIZE];
         println!("Concating {} ...", &i[&"read1".to_owned()]);
