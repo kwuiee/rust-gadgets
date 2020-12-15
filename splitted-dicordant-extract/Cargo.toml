@@ -1,0 +1,18 @@
+[package]
+name = "spdis"
+version = "0.0.2"
+authors = ["slyo <sean.lyo@outlook.com>"]
+edition = "2018"
+description = "Extract splitted and discordant reads from sam/bam according to lumpy."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.33.0"
+rust-htslib = "=0.26.0"
+jemallocator = "0.3.2"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
