@@ -1,0 +1,12 @@
+[package]
+name = "ef"
+version = "0.1.0"
+authors = ["slyo <sean.lyo@outlook.com>"]
+edition = "2018"
+description = "Explain sam flags according to https://broadinstitute.github.io/picard/explain-flags.html"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "^1.4.0"
+colored = "^2"
