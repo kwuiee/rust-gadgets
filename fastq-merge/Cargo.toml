@@ -1,0 +1,18 @@
+[package]
+name = "fqmerge"
+version = "0.1.0"
+authors = ["slyo <sean.lyo@outlook.com>"]
+edition = "2018"
+description = "Merge fastq pairs in a directory into one pair."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glob = "^0.3.0"
+clap = "^2.33.1"
+flate2 = {version="^1.0.16", features = ["rust_backend"]}
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
