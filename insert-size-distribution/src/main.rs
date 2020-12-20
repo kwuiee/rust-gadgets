@@ -1,21 +1,19 @@
 #![feature(map_first_last, unsigned_abs)]
 extern crate bam;
+#[macro_use]
+extern crate clap;
 extern crate sled;
 
 use std::collections::BTreeMap;
 use std::convert::From;
 use std::convert::TryInto;
-use std::env;
 use std::error::Error;
 use std::iter::Iterator;
 
 use bam::BamReader;
+use clap::{App, AppSettings};
 use sled::Db as Sled;
 use sled::{Config, IVec};
-
-fn opterr() -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::InvalidData, "Option error.")
-}
 
 struct Bookkeeper {
     inner: Sled,
@@ -24,9 +22,9 @@ struct Bookkeeper {
 }
 
 impl Bookkeeper {
-    fn new() -> Result<Bookkeeper, sled::Error> {
+    fn new() -> Result<Self, sled::Error> {
         let config = Config::new().temporary(true);
-        Ok(Bookkeeper {
+        Ok(Self {
             inner: config.open()?,
             cache: BTreeMap::new(),
             capacity: 200,
@@ -61,10 +59,10 @@ impl Bookkeeper {
         }
     }
 
-    fn write_csv(&mut self) -> Result<(), Box<dyn Error>> {
+    fn write_csv(&mut self, output: &str) -> Result<(), Box<dyn Error>> {
         let mut output = csv::WriterBuilder::new()
             .delimiter(b'\t')
-            .from_path("output.csv")?;
+            .from_path(output)?;
         output.write_record(&[b"length", b"number"])?;
         self.inner.iter().try_for_each(|each| {
             let (key, value): (IVec, IVec) = each?;
@@ -86,16 +84,24 @@ impl Bookkeeper {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let bam = if let Some(v) = env::args().nth(1) {
-        BamReader::from_path(v, 0)?
-    } else {
-        return Err(Box::new(opterr()));
-    };
+    let opts = App::new(crate_name!())
+        .author(crate_authors!())
+        .about(crate_description!())
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .args_from_usage(
+            "
+            <output> -o, --output=[file] 'Output file path.'
+            <bam> 'Input bam file.'
+            ",
+        )
+        .get_matches();
+    let bam = opts.value_of("bam").unwrap();
+    let output = opts.value_of("output").unwrap();
     let mut bk = Bookkeeper::new()?;
-    for i in bam {
+    for i in BamReader::from_path(bam, 0)? {
         bk.value_mut(&i?.template_len().unsigned_abs())
             .map(|v| *v += 1)?;
     }
-    bk.write_csv()?;
+    bk.write_csv(output)?;
     Ok(())
 }
