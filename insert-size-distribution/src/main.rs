@@ -2,16 +2,21 @@
 extern crate bam;
 #[macro_use]
 extern crate clap;
+extern crate plotlib;
 extern crate sled;
 
 use std::collections::BTreeMap;
 use std::convert::From;
 use std::convert::TryInto;
 use std::error::Error;
-use std::iter::Iterator;
 
+use bam::record;
 use bam::BamReader;
 use clap::{App, AppSettings};
+use plotlib::grid::Grid;
+use plotlib::page::Page;
+use plotlib::repr::BarChart;
+use plotlib::view::{CategoricalView, View};
 use sled::Db as Sled;
 use sled::{Config, IVec};
 
@@ -59,26 +64,32 @@ impl Bookkeeper {
         }
     }
 
-    fn write_csv(&mut self, output: &str) -> Result<(), Box<dyn Error>> {
-        let mut output = csv::WriterBuilder::new()
-            .delimiter(b'\t')
-            .from_path(output)?;
-        output.write_record(&[b"length", b"number"])?;
-        self.inner.iter().try_for_each(|each| {
+    /// SVG plot.
+    ///
+    /// ## FIXME
+    ///
+    /// - X-axis order error.
+    fn write_svg(&mut self, output: &str) -> Result<(), Box<dyn Error>> {
+        let mut v = CategoricalView::new().x_label("Insert size");
+        v.add_grid(Grid::new(20, 1));
+        for each in self.inner.iter() {
             let (key, value): (IVec, IVec) = each?;
-            output.write_record(&[
-                u32::from_le_bytes(key.as_ref().try_into()?)
-                    .to_string()
-                    .as_bytes(),
-                u32::from_le_bytes(value.as_ref().try_into()?)
-                    .to_string()
-                    .as_bytes(),
-            ])?;
-            Ok::<(), Box<dyn Error>>(())
-        })?;
-        while let Some((key, value)) = self.cache.pop_first() {
-            output.write_record(&[key.to_string().as_bytes(), value.to_string().as_bytes()])?;
+            let key = u32::from_le_bytes(key.as_ref().try_into()?);
+            let value = u32::from_le_bytes(value.as_ref().try_into()?) as f64;
+            if key > 2000 {
+                continue;
+            };
+            let bc = BarChart::new(value).label(key.to_string());
+            v = v.add(bc);
         }
+        while let Some((key, value)) = self.cache.pop_first() {
+            if key > 2000 {
+                continue;
+            };
+            let bc = BarChart::new(value as f64).label(key.to_string());
+            v = v.add(bc);
+        }
+        Page::single(&v).save(output)?;
         Ok(())
     }
 }
@@ -99,9 +110,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output = opts.value_of("output").unwrap();
     let mut bk = Bookkeeper::new()?;
     for i in BamReader::from_path(bam, 0)? {
-        bk.value_mut(&i?.template_len().unsigned_abs())
+        let rd = i?;
+        let ref flag = rd.flag().0;
+        let positive = record::RECORD_PAIRED + record::FIRST_IN_PAIR + record::ALL_SEGMENTS_ALIGNED;
+        let negative = record::SECONDARY + record::SUPPLEMENTARY;
+        if flag & positive != positive || flag & negative != 0 || rd.ref_id() != rd.mate_ref_id() {
+            continue;
+        };
+        bk.value_mut(&rd.template_len().unsigned_abs())
             .map(|v| *v += 1)?;
     }
-    bk.write_csv(output)?;
+    bk.write_svg(output)?;
     Ok(())
 }

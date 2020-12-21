@@ -10,7 +10,7 @@ description = "Insert size(template length) consensus with little memory."
 [dependencies]
 sled = "^0.34.6"
 bam = "^0.1.2"
-csv = "^1.1.5"
+plotlib = "^0.5.1"
 
 [dependencies.clap]
 version = "^2.33.3"
