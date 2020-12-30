@@ -192,7 +192,7 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
         .add(line)
         .x_label("插入片段大小(bp)")
         .y_label("比例");
-    view.add_grid(Grid::new(4, 4));
+    view.add_grid(Grid::new(5, 4));
     Page::single(&view)
         .save(svg)
         .map_err(|_| Error::new(InvalidData, format!("Failed to write {}", svg)))?;
