@@ -1,5 +1,4 @@
-#![feature(map_first_last, unsigned_abs)]
-// extern crate bam;
+#![feature(unsigned_abs)]
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
