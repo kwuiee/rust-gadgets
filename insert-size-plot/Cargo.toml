@@ -1,5 +1,5 @@
 [package]
-name = "sid"
+name = "insize"
 version = "0.1.0"
 authors = ["slyo <sean.lyo@outlook.com>"]
 edition = "2018"
@@ -8,10 +8,15 @@ description = "Insert size(template length) consensus with little memory."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sled = "^0.34.6"
-bam = "^0.1.2"
 plotlib = "^0.5.1"
+byteorder = "^1"
+flate2 = "^1"
 
 [dependencies.clap]
 version = "^2.33.3"
 features = ["suggestions"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
