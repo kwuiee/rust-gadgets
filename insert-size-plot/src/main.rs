@@ -184,7 +184,7 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
     )
     .line_style(
         LineStyle::new()
-            .colour("burlywood")
+            .colour("#50AD9F")
             .linejoin(LineJoin::Round)
             .width(1.0),
     );
