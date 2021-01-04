@@ -247,7 +247,8 @@ impl Sum {
                 + qual2err(*qual as f64))
                 / (depth1 + 1f64);
             self.error1.set(index, new_err);
-            let new_qual = (self.quality1.get(index).unwrap_or(&0f64) * depth1 + *qual as f64)
+            let new_qual = (self.quality1.get(index).unwrap_or(&0f64) * depth1
+                + (*qual - 32) as f64)
                 / (depth1 + 1f64);
             self.quality1.set(index, new_qual);
             match BaseType::guess(*base) {
@@ -271,7 +272,8 @@ impl Sum {
                 + qual2err(*qual as f64))
                 / (depth2 + 1f64);
             self.error2.set(index, new_err);
-            let new_qual = (self.quality2.get(index).unwrap_or(&0f64) * depth2 + *qual as f64)
+            let new_qual = (self.quality2.get(index).unwrap_or(&0f64) * depth2
+                + (*qual - 32) as f64)
                 / (depth2 + 1f64);
             self.quality2.set(index, new_qual);
             match BaseType::guess(*base) {
@@ -447,7 +449,7 @@ impl Sum {
                     .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
             );
         Page::single(&view)
-            .save(format!("{}gc.svg", prefix))
+            .save(format!("{}.gc.svg", prefix))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         // Plot qual.
@@ -478,7 +480,7 @@ impl Sum {
                     .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
             );
         Page::single(&view)
-            .save(format!("{}qual.svg", prefix))
+            .save(format!("{}.qual.svg", prefix))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         // Plot error.
@@ -509,7 +511,7 @@ impl Sum {
                     .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
             );
         Page::single(&view)
-            .save(format!("{}err.svg", prefix))
+            .save(format!("{}.err.svg", prefix))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         Ok(())
     }
