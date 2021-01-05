@@ -4,20 +4,21 @@ extern crate byteorder;
 extern crate clap;
 extern crate flate2;
 extern crate plotlib;
+extern crate serde;
+extern crate serde_json;
 
 use std::fs::File;
 use std::io::ErrorKind::{InvalidData, UnexpectedEof};
 use std::io::{BufRead, BufReader, Error, Read, Result};
 
-// use bam::bgzip::read::ConsecutiveReader;
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::{App, AppSettings};
 use flate2::read::MultiGzDecoder;
-use plotlib::grid::Grid;
 use plotlib::page::Page;
 use plotlib::repr::Plot;
 use plotlib::style::{LineJoin, LineStyle};
-use plotlib::view::{ContinuousView, View};
+use plotlib::view::ContinuousView;
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 /// Read is paired, first in pair, properly mapped.
 const P_FLAG: u16 = 0x1 + 0x2 + 0x40;
@@ -156,11 +157,53 @@ impl Record {
     }
 }
 
+#[derive(Default)]
+struct Summary {
+    // Pair count all.
+    all_count: u32,
+    // Insert size mean in all.
+    all_mean: f64,
+    // Pair count.
+    count: u32,
+    // Insert size mean.
+    mean: f64,
+    // Insert size standard deviation.
+    std: f64,
+    // First quantile.
+    q1: usize,
+    // Second quantile.
+    q2: usize,
+    // Third quantile.
+    q3: usize,
+}
+
+impl Serialize for Summary {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Color", 8)?;
+        state.serialize_field("all_count", &self.all_count)?;
+        state.serialize_field(
+            "all_mean",
+            &format!("{:.2}", self.all_mean).parse::<f64>().unwrap(),
+        )?;
+        state.serialize_field("count", &self.count)?;
+        state.serialize_field("mean", &format!("{:.2}", self.mean).parse::<f64>().unwrap())?;
+        state.serialize_field("std", &format!("{:.2}", self.std).parse::<f64>().unwrap())?;
+        state.serialize_field("q1", &self.q1)?;
+        state.serialize_field("q2", &self.q2)?;
+        state.serialize_field("q3", &self.q3)?;
+        state.end()
+    }
+}
+
 fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
     let mut data = vec![0u32; *upper + 1];
     let mut record = Record::default();
     let mut reader = BamReader::from_path(bam)?;
-    let mut total = 0;
+    let mut sum = Summary::default();
+
     while reader.read_into(&mut record)? {
         if record.flag() & P_FLAG != P_FLAG
             || record.flag() & N_FLAG != 0
@@ -169,33 +212,76 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
             continue;
         };
         let tlen = record.tlen().unsigned_abs() as usize;
+        sum.all_mean += tlen as f64;
+        sum.all_count += 1;
         if &tlen > upper {
             continue;
         };
         data[tlen] += 1;
-        total += 1;
+        sum.mean += tlen as f64;
+        sum.count += 1;
     }
+    sum.all_mean /= sum.all_count as f64;
+    sum.mean /= sum.count as f64;
+
+    // Calculate quantiles and std.
+    let mut quantiles = {
+        let tmp = sum.count as f64;
+        vec![
+            ((tmp * 0.25f64) as u32, 0usize),
+            ((tmp * 0.5f64) as u32, 0usize),
+            ((tmp * 0.75f64) as u32, 0usize),
+        ]
+    };
+
+    let mut ri = 0usize;
+    let mut flag = true;
+    let mut accum: u32 = 0;
+
+    data.iter().enumerate().for_each(|(k, v)| {
+        accum += v;
+        if flag {
+            let (index, value) = &mut quantiles[ri];
+            if accum > *index {
+                *value = k;
+                ri += 1;
+            };
+            flag = ri < quantiles.len();
+        };
+        sum.std += (k as f64 - sum.mean).powi(2);
+    });
+    sum.std = (sum.std / (sum.count as f64)).powf(0.5f64);
+    unsafe {
+        sum.q1 = quantiles.get_unchecked(0).1;
+        sum.q2 = quantiles.get_unchecked(1).1;
+        sum.q3 = quantiles.get_unchecked(2).1;
+    }
+
     // Plot line.
     let line = Plot::new(
         data.into_iter()
             .enumerate()
-            .map(|(i, j)| (i as f64, (j as f64) / (total as f64)))
+            .map(|(i, j)| (i as f64, (j as f64) / (sum.count as f64)))
             .collect(),
     )
     .line_style(
         LineStyle::new()
-            .colour("#50AD9F")
+            .colour("#FF0000")
             .linejoin(LineJoin::Round)
             .width(1.0),
     );
-    let mut view = ContinuousView::new()
+    let view = ContinuousView::new()
         .add(line)
         .x_label("插入片段大小(bp)")
         .y_label("比例");
-    view.add_grid(Grid::new(5, 4));
     Page::single(&view)
         .save(svg)
         .map_err(|_| Error::new(InvalidData, format!("Failed to write {}", svg)))?;
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&sum).map_err(|e| Error::new(InvalidData, e))?
+    );
     Ok(())
 }
 
