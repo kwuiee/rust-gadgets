@@ -2,6 +2,8 @@ extern crate bio;
 #[macro_use]
 extern crate clap;
 extern crate flate2;
+extern crate plotlib;
+extern crate plotters;
 
 use std::fs::File;
 use std::io::ErrorKind::InvalidData;
@@ -13,7 +15,9 @@ use bio::io::fastq::Record as FastqRecord;
 use bio::io::fastq::Records as FastqRecords;
 use clap::{App, AppSettings};
 use flate2::read::MultiGzDecoder;
+use plotters::prelude::*;
 
+// TODO: remove plotlib.
 use plotlib::page::Page;
 use plotlib::repr::Plot;
 use plotlib::style::{LineJoin, LineStyle};
@@ -323,7 +327,7 @@ impl Sum {
             q1.push((v as f64, y));
             y = *self.error1.get(v).unwrap_or(&0f64);
             e_max = f64::max(e_max, y);
-            e1.push((v as f64, e_max));
+            e1.push((v as f64, y));
         });
         let a1 = Plot::new(a1)
             .line_style(
@@ -485,33 +489,50 @@ impl Sum {
 
         // Plot error.
         e_max = f64::max(round_max(e_max), 0.01f64);
-        let view = ContinuousView::new()
-            .x_range(0f64, (len1 + len2 + 1) as f64)
-            .x_label("测序片段位置")
-            .y_label("错误率(%)")
-            .y_range(0f64, e_max)
-            .add(
-                Plot::new(e1).line_style(
-                    LineStyle::new()
-                        .colour("#FF0000")
-                        .linejoin(LineJoin::Round)
-                        .width(1.0),
-                ),
+        let name = format!("{}.err.svg", prefix);
+        let root = SVGBackend::new(&name, (500, 430)).into_drawing_area();
+
+        root.fill(&WHITE)
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        let mut chart = ChartBuilder::on(&root)
+            .x_label_area_size(35)
+            .y_label_area_size(40)
+            .margin(5)
+            .build_cartesian_2d(
+                (0f64..((len1 + len2) as f64))
+                    .step(1.0)
+                    .use_round()
+                    .into_segmented(),
+                0f64..e_max,
             )
-            .add(
-                Plot::new(e2).line_style(
-                    LineStyle::new()
-                        .colour("#FF0000")
-                        .linejoin(LineJoin::Round)
-                        .width(1.0),
-                ),
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .bold_line_style(&WHITE.mix(0.3))
+            .x_desc("测序片段位置")
+            .y_desc("错误率(%)")
+            .axis_desc_style(("sans-serif", 20))
+            .draw()
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .draw_series(
+                Histogram::vertical(&chart)
+                    .style(RED.mix(0.5).filled())
+                    .data(e1.into_iter())
+                    .margin(0),
             )
-            .add(
-                Plot::new(vec![(len1 as f64, 0f64), (len1 as f64, e_max)])
-                    .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
-            );
-        Page::single(&view)
-            .save(format!("{}.err.svg", prefix))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(
+                Histogram::vertical(&chart)
+                    .style(RED.mix(0.5).filled())
+                    .data(e2.into_iter())
+                    .margin(0),
+            )
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         Ok(())
     }
@@ -524,7 +545,7 @@ fn main() -> Result<()> {
         .setting(AppSettings::ArgRequiredElseHelp)
         .args_from_usage(
             "
-            <prefix> -o, --prefix=[FILE] 'Output prefix.'
+            <prefix> -p, --prefix=[FILE] 'Output prefix.'
             <read1> -1, --read1=[FILE] 'Fastq of read1.'
             <read2> -2, --read2=[FILE] 'Fastq of read2.'
             ",
