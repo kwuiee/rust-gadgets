@@ -143,6 +143,7 @@ fn qual2err(v: f64) -> f64 {
     10f64.powf((32f64 - v) / 10f64)
 }
 
+/// Round a float to a bigger neighbor for axis tick.
 fn round_max(mut v: f64) -> f64 {
     let mut digits = 0i32;
     if v >= 10f64 {
@@ -435,6 +436,7 @@ impl Sum {
         b_max = f64::max(round_max(b_max), 51f64);
         let view = ContinuousView::new()
             .x_range(0f64, (len1 + len2 + 1) as f64)
+            .x_max_ticks(7)
             .x_label("测序片段位置")
             .y_label("比例(%)")
             .y_range(0f64, b_max)
@@ -460,6 +462,7 @@ impl Sum {
         q_max = f64::max(round_max(q_max), 41f64);
         let view = ContinuousView::new()
             .x_range(0f64, (len1 + len2 + 1) as f64)
+            .x_max_ticks(7)
             .x_label("测序片段位置")
             .y_label("质量值")
             .y_range(0f64, q_max)
@@ -488,9 +491,9 @@ impl Sum {
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         // Plot error.
-        e_max = f64::max(round_max(e_max), 0.01f64);
+        e_max = f64::max(round_max(e_max), 0.0101f64);
         let name = format!("{}.err.svg", prefix);
-        let root = SVGBackend::new(&name, (500, 430)).into_drawing_area();
+        let root = SVGBackend::new(&name, (700, 610)).into_drawing_area();
 
         root.fill(&WHITE)
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
@@ -500,7 +503,7 @@ impl Sum {
             .y_label_area_size(40)
             .margin(5)
             .build_cartesian_2d(
-                (0f64..((len1 + len2) as f64))
+                (0f64..((len1 + len2 + 1) as f64))
                     .step(1.0)
                     .use_round()
                     .into_segmented(),
@@ -574,7 +577,7 @@ mod test {
 
     #[test]
     fn test_round_max() {
-        assert_eq!(round_max(0.0035f64), 0.00401f64);
-        assert_eq!(round_max(55f64), 60.1f64);
+        assert!(round_max(0.0035f64) > 0.004f64);
+        assert!(round_max(55f64) > 60.1f64);
     }
 }

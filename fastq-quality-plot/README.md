@@ -31,4 +31,8 @@ OPTIONS:
 
 ## Benchmark
 
+For gziped fastq,
 
+```
+~ 3.5min/Gb
+```
