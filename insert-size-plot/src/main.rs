@@ -1,4 +1,3 @@
-#![feature(unsigned_abs)]
 extern crate byteorder;
 #[macro_use]
 extern crate clap;
@@ -211,7 +210,7 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
         {
             continue;
         };
-        let tlen = record.tlen().unsigned_abs() as usize;
+        let tlen = record.tlen().abs() as usize;
         sum.all_mean += tlen as f64;
         sum.all_count += 1;
         if &tlen > upper {
