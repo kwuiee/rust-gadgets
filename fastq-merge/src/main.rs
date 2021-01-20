@@ -4,11 +4,6 @@ extern crate clap;
 extern crate flate2;
 extern crate glob;
 
-use clap::{App, AppSettings};
-use flate2::read::MultiGzDecoder;
-use flate2::write::GzEncoder;
-use flate2::Compression;
-use glob::glob;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs::{self, File};
@@ -17,7 +12,14 @@ use std::io::{self, BufWriter, Read, Write};
 use std::os::unix::fs::symlink;
 #[cfg(target_family = "windows")]
 use std::os::windows::fs::symlink_file as symlink;
+use std::path::PathBuf;
 use std::result::Result;
+
+use clap::{App, AppSettings};
+use flate2::read::MultiGzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use glob::glob;
 
 const BUFFER_SIZE: usize = 32 * 1024;
 
@@ -25,6 +27,7 @@ fn none_err() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "NoneError")
 }
 
+#[allow(unused_must_use)]
 fn main() -> Result<(), Box<dyn Error>> {
     let args = App::new(crate_name!())
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -42,6 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let srcdir: &str = args.value_of("srcdir").ok_or_else(none_err)?;
     let read1: &str = args.value_of("read1").ok_or_else(none_err)?;
     let read2: &str = args.value_of("read2").ok_or_else(none_err)?;
+
     let mut collector: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
     // *_R[12].f{ast,}q.gz
     for alias in &["fastq", "fq"] {
@@ -64,16 +68,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         // remove singles
         collector.drain_filter(|_, v| v.len() <= 1);
     }
+
     if collector.is_empty() {
         return Err(io::Error::new(io::ErrorKind::NotFound, "Gzipped fastq not found").into());
     } else if collector.len() == 1 {
         let (_, pair) = collector.first_key_value().ok_or_else(none_err)?;
-        fs::remove_file(read1).unwrap_or_else(|e| eprintln!("{}", e));
-        symlink(&pair[&"read1".to_owned()], read1)?;
-        fs::remove_file(read2).unwrap_or_else(|e| eprintln!("{}", e));
-        symlink(&pair[&"read2".to_owned()], read2)?;
+        fs::remove_file(read1);
+        symlink(
+            PathBuf::from(&pair[&"read1".to_owned()]).canonicalize()?,
+            read1,
+        )?;
+        fs::remove_file(read2);
+        symlink(
+            PathBuf::from(&pair[&"read2".to_owned()]).canonicalize()?,
+            read2,
+        )?;
         return Ok(());
     }
+
     let mut stream1 = BufWriter::new(GzEncoder::new(
         File::with_options().write(true).create(true).open(read1)?,
         Compression::fast(),
@@ -84,14 +96,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     ));
     for i in collector.values() {
         let mut buffer: Vec<u8> = vec![0; BUFFER_SIZE];
-        println!("Concating {} ...", &i[&"read1".to_owned()]);
+        eprintln!("Concating {} ...", &i[&"read1".to_owned()]);
         let mut reader = MultiGzDecoder::new(File::open(&i[&"read1".to_owned()])?);
         let mut size = BUFFER_SIZE;
         while size != 0 {
             size = reader.read(&mut buffer)?;
             stream1.write_all(&buffer[..size])?;
         }
-        println!("Concating {} ...", &i[&"read2".to_owned()]);
+        eprintln!("Concating {} ...", &i[&"read2".to_owned()]);
         reader = MultiGzDecoder::new(File::open(&i[&"read2".to_owned()])?);
         size = BUFFER_SIZE;
         while size != 0 {
