@@ -1,4 +1,4 @@
-# Fastq Quality plot
+# fqplot: Fastq Quality plot
 
 Quality, gc, error rate stats and plot form fastq file.
 
@@ -23,6 +23,8 @@ OPTIONS:
     -1, --read1 <FILE>     Fastq of read1.
     -2, --read2 <FILE>     Fastq of read2.
 ```
+
+To make it work, font `wqy-zenhei` need installing first. See directory `data`.
 
 ## Todo
 

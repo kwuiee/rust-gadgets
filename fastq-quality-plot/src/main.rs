@@ -2,7 +2,6 @@ extern crate bio;
 #[macro_use]
 extern crate clap;
 extern crate flate2;
-extern crate plotlib;
 extern crate plotters;
 
 use std::fs::File;
@@ -16,12 +15,6 @@ use bio::io::fastq::Records as FastqRecords;
 use clap::{App, AppSettings};
 use flate2::read::MultiGzDecoder;
 use plotters::prelude::*;
-
-// TODO: remove plotlib.
-use plotlib::page::Page;
-use plotlib::repr::Plot;
-use plotlib::style::{LineJoin, LineStyle};
-use plotlib::view::ContinuousView;
 
 const GZ_MAGIC: [u8; 3] = [0x1f, 0x8b, 0x08];
 
@@ -330,46 +323,6 @@ impl Sum {
             e_max = f64::max(e_max, y);
             e1.push((v as f64, y));
         });
-        let a1 = Plot::new(a1)
-            .line_style(
-                LineStyle::new()
-                    .colour("#5150ad")
-                    .linejoin(LineJoin::Round)
-                    .width(1.0),
-            )
-            .legend("A".to_string());
-        let t1 = Plot::new(t1)
-            .line_style(
-                LineStyle::new()
-                    .colour("#50ada9")
-                    .linejoin(LineJoin::Round)
-                    .width(1.0),
-            )
-            .legend("T".to_string());
-        let c1 = Plot::new(c1)
-            .line_style(
-                LineStyle::new()
-                    .colour("#BEBEBE")
-                    .linejoin(LineJoin::Round)
-                    .width(1.0),
-            )
-            .legend("C".to_string());
-        let g1 = Plot::new(g1)
-            .line_style(
-                LineStyle::new()
-                    .colour("#FA8072")
-                    .linejoin(LineJoin::Round)
-                    .width(1.0),
-            )
-            .legend("G".to_string());
-        let n1 = Plot::new(n1)
-            .line_style(
-                LineStyle::new()
-                    .colour("#FF0000")
-                    .linejoin(LineJoin::Round)
-                    .width(1.0),
-            )
-            .legend("N".to_string());
 
         let len2 = self.len2();
         let mut a2 = Vec::<(f64, f64)>::with_capacity(len2);
@@ -403,97 +356,152 @@ impl Sum {
             e_max = f64::max(e_max, y);
             e2.push(((v + len1) as f64, y));
         });
-        let a2 = Plot::new(a2).line_style(
-            LineStyle::new()
-                .colour("#5150ad")
-                .linejoin(LineJoin::Round)
-                .width(1.0),
-        );
-        let t2 = Plot::new(t2).line_style(
-            LineStyle::new()
-                .colour("#50ada9")
-                .linejoin(LineJoin::Round)
-                .width(1.0),
-        );
-        let c2 = Plot::new(c2).line_style(
-            LineStyle::new()
-                .colour("#BEBEBE")
-                .linejoin(LineJoin::Round)
-                .width(1.0),
-        );
-        let g2 = Plot::new(g2).line_style(
-            LineStyle::new()
-                .colour("#FA8072")
-                .linejoin(LineJoin::Round)
-                .width(1.0),
-        );
-        let n2 = Plot::new(n2).line_style(
-            LineStyle::new()
-                .colour("#FF0000")
-                .linejoin(LineJoin::Round)
-                .width(1.0),
-        );
+
+        // Plot gc.
+        // color A: RGBColor(81, 80, 173) #5150ad;
+        // color T: RGBColor(80, 173, 169) #50ada9;
+        // color C: RGBColor(190, 190, 190) #BEBEBE;
+        // color G: RGBColor(250, 128, 114) #FA8072;
+        // color N: RGBColor(255, 0, 0) #FF0000
         b_max = f64::max(round_max(b_max), 51f64);
-        let view = ContinuousView::new()
-            .x_range(0f64, (len1 + len2 + 1) as f64)
-            .x_max_ticks(7)
-            .x_label("测序片段位置")
-            .y_label("比例(%)")
-            .y_range(0f64, b_max)
-            .add(a1)
-            .add(t1)
-            .add(c1)
-            .add(g1)
-            .add(n1)
-            .add(a2)
-            .add(t2)
-            .add(c2)
-            .add(g2)
-            .add(n2)
-            .add(
-                Plot::new(vec![(len1 as f64, 0f64), (len1 as f64, b_max)])
-                    .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
-            );
-        Page::single(&view)
-            .save(format!("{}.gc.svg", prefix))
+        let name = format!("{}.gc.png", prefix);
+        let root = BitMapBackend::new(&name, (700, 610)).into_drawing_area();
+
+        root.fill(&WHITE)
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        let mut chart = ChartBuilder::on(&root)
+            .x_label_area_size(35)
+            .y_label_area_size(40)
+            .margin(5)
+            .build_cartesian_2d(
+                (0f64..((len1 + len2 + 1) as f64))
+                    .step(1.0)
+                    .use_round()
+                    .into_segmented(),
+                0f64..b_max,
+            )
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .bold_line_style(&WHITE.mix(0.3))
+            .x_desc("测序片段位置")
+            .y_desc("比例(%)")
+            .axis_desc_style((FontFamily::Name("WenQuanYi Zen Hei"), 20))
+            .draw()
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .draw_series(LineSeries::new(
+                a1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(81, 80, 173),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                a2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(81, 80, 173),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                t1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(80, 173, 169),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                t2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(80, 173, 169),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                c1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(190, 190, 190),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                c2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(190, 190, 190),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                g1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(250, 128, 114),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                g2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(250, 128, 114),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                n1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(255, 0, 0),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                n2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RGBColor(255, 0, 0),
+            ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         // Plot qual.
         q_max = f64::max(round_max(q_max), 41f64);
-        let view = ContinuousView::new()
-            .x_range(0f64, (len1 + len2 + 1) as f64)
-            .x_max_ticks(7)
-            .x_label("测序片段位置")
-            .y_label("质量值")
-            .y_range(0f64, q_max)
-            .add(
-                Plot::new(q1).line_style(
-                    LineStyle::new()
-                        .colour("#FF0000")
-                        .linejoin(LineJoin::Round)
-                        .width(1.0),
-                ),
+        let name = format!("{}.qual.png", prefix);
+        let root = BitMapBackend::new(&name, (700, 610)).into_drawing_area();
+
+        root.fill(&WHITE)
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        let mut chart = ChartBuilder::on(&root)
+            .x_label_area_size(35)
+            .y_label_area_size(40)
+            .margin(5)
+            .build_cartesian_2d(
+                (0f64..((len1 + len2 + 1) as f64))
+                    .step(1.0)
+                    .use_round()
+                    .into_segmented(),
+                0f64..q_max,
             )
-            .add(
-                Plot::new(q2).line_style(
-                    LineStyle::new()
-                        .colour("#FF0000")
-                        .linejoin(LineJoin::Round)
-                        .width(1.0),
-                ),
-            )
-            .add(
-                Plot::new(vec![(len1 as f64, 0f64), (len1 as f64, q_max)])
-                    .line_style(LineStyle::new().colour("#FFE4C4").width(1.0)),
-            );
-        Page::single(&view)
-            .save(format!("{}.qual.svg", prefix))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .bold_line_style(&WHITE.mix(0.3))
+            .x_desc("测序片段位置")
+            .y_desc("质量值")
+            .axis_desc_style((FontFamily::Name("WenQuanYi Zen Hei"), 20))
+            .draw()
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+        chart
+            .draw_series(LineSeries::new(
+                q1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RED.mix(0.5),
+            ))
+            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        chart
+            .draw_series(LineSeries::new(
+                q2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
+                &RED.mix(0.5),
+            ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         // Plot error.
         e_max = f64::max(round_max(e_max), 0.0101f64);
-        let name = format!("{}.err.svg", prefix);
-        let root = SVGBackend::new(&name, (700, 610)).into_drawing_area();
+        let name = format!("{}.err.png", prefix);
+        let root = BitMapBackend::new(&name, (700, 610)).into_drawing_area();
 
         root.fill(&WHITE)
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
@@ -517,7 +525,7 @@ impl Sum {
             .bold_line_style(&WHITE.mix(0.3))
             .x_desc("测序片段位置")
             .y_desc("错误率(%)")
-            .axis_desc_style(("sans-serif", 20))
+            .axis_desc_style((FontFamily::Name("WenQuanYi Zen Hei"), 20))
             .draw()
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
