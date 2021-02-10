@@ -3,21 +3,24 @@ extern crate byteorder;
 extern crate clap;
 extern crate flate2;
 extern crate plotlib;
+extern crate plotters;
 extern crate serde;
 extern crate serde_json;
 
 use std::fs::File;
 use std::io::ErrorKind::{InvalidData, UnexpectedEof};
-use std::io::{BufRead, BufReader, Error, Read, Result};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::{App, AppSettings};
 use flate2::read::MultiGzDecoder;
+use plotters::prelude::*;
+use serde::ser::{Serialize, SerializeStruct, Serializer};
+
 use plotlib::page::Page;
 use plotlib::repr::Plot;
 use plotlib::style::{LineJoin, LineStyle};
 use plotlib::view::ContinuousView;
-use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 /// Read is paired, first in pair, properly mapped.
 const P_FLAG: u16 = 0x1 + 0x2 + 0x40;
@@ -197,7 +200,23 @@ impl Serialize for Summary {
     }
 }
 
-fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
+fn round_max(mut v: f64) -> f64 {
+    let mut digits = 0i32;
+    if v >= 10f64 {
+        while v >= 10f64 {
+            v /= 10f64;
+            digits += 1;
+        }
+    } else if v < 1f64 {
+        while v < 1f64 {
+            v *= 10f64;
+            digits -= 1;
+        }
+    }
+    (v.ceil() + 0.1f64) * 10f64.powi(digits)
+}
+
+fn cli(bam: &str, pic: &str, upper: &usize, format: &PicFormat) -> Result<()> {
     let mut data = vec![0u32; *upper + 1];
     let mut record = Record::default();
     let mut reader = BamReader::from_path(bam)?;
@@ -237,6 +256,7 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
     let mut flag = true;
     let mut accum: u32 = 0;
 
+    let mut height_max: u32 = 0;
     data.iter().enumerate().for_each(|(k, v)| {
         accum += v;
         if flag {
@@ -248,6 +268,7 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
             flag = ri < quantiles.len();
         };
         sum.std += (k as f64 - sum.mean).powi(2);
+        height_max = u32::max(*v, height_max);
     });
     sum.std = (sum.std / (sum.count as f64)).powf(0.5f64);
     unsafe {
@@ -255,33 +276,93 @@ fn cli(bam: &str, svg: &str, upper: &usize) -> Result<()> {
         sum.q2 = quantiles.get_unchecked(1).1;
         sum.q3 = quantiles.get_unchecked(2).1;
     }
+    let height_max: f64 = round_max((height_max as f64) / (sum.count as f64));
 
     // Plot line.
-    let line = Plot::new(
-        data.into_iter()
-            .enumerate()
-            .map(|(i, j)| (i as f64, (j as f64) / (sum.count as f64)))
-            .collect(),
-    )
-    .line_style(
-        LineStyle::new()
-            .colour("#FF0000")
-            .linejoin(LineJoin::Round)
-            .width(1.0),
-    );
-    let view = ContinuousView::new()
-        .add(line)
-        .x_label("插入片段大小(bp)")
-        .y_label("比例");
-    Page::single(&view)
-        .save(svg)
-        .map_err(|_| Error::new(InvalidData, format!("Failed to write {}", svg)))?;
+    match format {
+        PicFormat::SVG => {
+            let line = Plot::new(
+                data.into_iter()
+                    .enumerate()
+                    .map(|(i, j)| (i as f64, (j as f64) / (sum.count as f64)))
+                    .collect(),
+            )
+            .line_style(
+                LineStyle::new()
+                    .colour("#FF0000")
+                    .linejoin(LineJoin::Round)
+                    .width(1.0),
+            );
+            let view = ContinuousView::new()
+                .add(line)
+                .x_label("插入片段大小(bp)")
+                .y_label("比例");
+            Page::single(&view)
+                .save(pic)
+                .map_err(|_| Error::new(InvalidData, format!("Failed to write {}", pic)))?;
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&sum).map_err(|e| Error::new(InvalidData, e))?
-    );
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&sum).map_err(|e| Error::new(InvalidData, e))?
+            );
+        }
+        PicFormat::PNG => {
+            let root = BitMapBackend::new(pic, (700, 610)).into_drawing_area();
+            root.fill(&WHITE)
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+            let mut chart = ChartBuilder::on(&root)
+                .x_label_area_size(35)
+                .y_label_area_size(40)
+                .margin(5)
+                .build_cartesian_2d(
+                    (0f64..((upper + 1) as f64))
+                        .step(1.0)
+                        .use_round()
+                        .into_segmented(),
+                    0f64..height_max,
+                )
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+            chart
+                .configure_mesh()
+                .disable_mesh()
+                .bold_line_style(&WHITE.mix(0.3))
+                .x_desc("插入片段大小(bp)")
+                .y_desc("比例")
+                .axis_desc_style((FontFamily::Name("WenQuanYi Zen Hei"), 20))
+                .draw()
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+            chart
+                .draw_series(LineSeries::new(
+                    data.into_iter().enumerate().map(|(i, j)| {
+                        (
+                            SegmentValue::Exact(i as f64),
+                            (j as f64) / (sum.count as f64),
+                        )
+                    }),
+                    &RED,
+                ))
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        }
+    }
     Ok(())
+}
+
+enum PicFormat {
+    SVG,
+    PNG,
+}
+
+impl PicFormat {
+    fn from_str(v: &str) -> Result<Self> {
+        match v {
+            "svg" | "SVG" => Ok(Self::SVG),
+            "png" | "PNG" => Ok(Self::PNG),
+            _ => Err(Error::new(ErrorKind::InvalidData, "No such option.")),
+        }
+    }
 }
 
 fn main() -> Result<()> {
@@ -291,18 +372,22 @@ fn main() -> Result<()> {
         .setting(AppSettings::ArgRequiredElseHelp)
         .args_from_usage(
             "
-            <svg> -o=[FILE] 'Output svg file path.'
-            [upper] -m=[NUMBER] 'Maximum insert size to record. Bigger number costs more memory.'
+            <pic> -o=[FILE] 'Output pic file path.'
+            [upper] -m=[NUMBER] 'Maximum insert size to record, default 500. !Bigger number costs more memory!.'
+            [format] -f=[STRING] 'Output image format, available [SVG, PNG], default PNG.'
             <bam> 'Input bam file.'
             ",
         )
         .get_matches();
     let bam: &str = opts.value_of("bam").ok_or_else(opterr)?;
-    let svg: &str = opts.value_of("svg").ok_or_else(opterr)?;
+    let pic: &str = opts.value_of("pic").ok_or_else(opterr)?;
+    let format: PicFormat = opts
+        .value_of("format")
+        .map_or(Ok(PicFormat::PNG), PicFormat::from_str)?;
     let upper: usize = opts
         .value_of("upper")
         .unwrap_or("500")
         .parse()
         .map_err(|_| opterr())?;
-    cli(bam, svg, &upper)
+    cli(bam, pic, &upper, &format)
 }
