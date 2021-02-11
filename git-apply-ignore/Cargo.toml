@@ -9,3 +9,8 @@ description = "Remove tracked files/directory which are in .gitignore from index
 
 [dependencies]
 ignore = "^0.4.17"
+
+[profile.release]
+lto = "fat"
+panic = "abort"
+codegen-units = 1
