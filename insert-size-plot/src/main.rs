@@ -342,7 +342,7 @@ fn cli(bam: &str, pic: &str, upper: &usize, format: &PicFormat) -> Result<()> {
                             (j as f64) / (sum.count as f64),
                         )
                     }),
-                    &RED,
+                    RED.stroke_width(2),
                 ))
                 .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         }

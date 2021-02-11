@@ -284,8 +284,8 @@ impl Sum {
         }
     }
 
-    /// Plot content, quality, error and save with prefix prefix, namely, {prefix}_gc.svg,
-    /// {prefix}_qual.svg and {prefix}_err.svg.
+    /// Plot content, quality, error and save with prefix prefix, namely, {prefix}_gc.png,
+    /// {prefix}_qual.png and {prefix}_err.png.
     fn plot(&self, prefix: &str) -> Result<()> {
         // Plot GC.
         let len1 = self.len1();
@@ -396,61 +396,61 @@ impl Sum {
         chart
             .draw_series(LineSeries::new(
                 a1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(81, 80, 173),
+                RGBColor(81, 80, 173).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 a2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(81, 80, 173),
+                RGBColor(81, 80, 173).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 t1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(80, 173, 169),
+                RGBColor(80, 173, 169).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 t2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(80, 173, 169),
+                RGBColor(80, 173, 169).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 c1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(190, 190, 190),
+                RGBColor(190, 190, 190).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 c2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(190, 190, 190),
+                RGBColor(190, 190, 190).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 g1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(250, 128, 114),
+                RGBColor(250, 128, 114).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 g2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(250, 128, 114),
+                RGBColor(250, 128, 114).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 n1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(255, 0, 0),
+                RGBColor(255, 0, 0).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 n2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RGBColor(255, 0, 0),
+                RGBColor(255, 0, 0).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
@@ -488,13 +488,13 @@ impl Sum {
         chart
             .draw_series(LineSeries::new(
                 q1.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RED.mix(0.5),
+                RED.mix(0.5).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         chart
             .draw_series(LineSeries::new(
                 q2.into_iter().map(|(x, y)| (SegmentValue::Exact(x), y)),
-                &RED.mix(0.5),
+                RED.mix(0.5).stroke_width(2),
             ))
             .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
