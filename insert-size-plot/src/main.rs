@@ -36,6 +36,7 @@ struct BamReader<T: BufRead> {
 }
 
 impl BamReader<BufReader<MultiGzDecoder<File>>> {
+    /// Read a bam file from path.
     fn from_path(v: &str) -> Result<Self> {
         let mut file = BufReader::with_capacity(16 * 1024, MultiGzDecoder::new(File::open(v)?));
 
@@ -65,6 +66,7 @@ impl BamReader<BufReader<MultiGzDecoder<File>>> {
 }
 
 impl<T: BufRead> BamReader<T> {
+    /// Read a record (one line of bam).
     fn read_into(&mut self, record: &mut Record) -> Result<bool> {
         let mut rem_size = match self.reader.read_u32::<LittleEndian>() {
             Ok(value) => value as usize,
@@ -117,6 +119,7 @@ impl<T: BufRead> BamReader<T> {
     }
 }
 
+/// Compact read record.
 #[derive(Default)]
 struct Record {
     ref_id: i32,
@@ -200,6 +203,7 @@ impl Serialize for Summary {
     }
 }
 
+/// Get a proper upper limit value for figure axis.
 fn round_max(mut v: f64) -> f64 {
     let mut digits = 0i32;
     if v >= 10f64 {
@@ -357,10 +361,12 @@ enum PicFormat {
 
 impl PicFormat {
     fn from_str(v: &str) -> Result<Self> {
-        match v {
-            "svg" | "SVG" => Ok(Self::SVG),
-            "png" | "PNG" => Ok(Self::PNG),
-            _ => Err(Error::new(ErrorKind::InvalidData, "No such option.")),
+        if v.ends_with(".svg") || v.ends_with(".SVG") {
+            Ok(Self::SVG)
+        } else if v.ends_with(".png") || v.ends_with(".PNG") {
+            Ok(Self::PNG)
+        } else {
+            Err(Error::new(ErrorKind::InvalidData, "No such option."))
         }
     }
 }
@@ -372,18 +378,15 @@ fn main() -> Result<()> {
         .setting(AppSettings::ArgRequiredElseHelp)
         .args_from_usage(
             "
-            <pic> -o=[FILE] 'Output pic file path.'
+            <pic> -o=[FILE] 'Output pic file path, support `.svg` and `.png` suffix.'
             [upper] -m=[NUMBER] 'Maximum insert size to record, default 500. !Bigger number costs more memory!.'
-            [format] -f=[STRING] 'Output image format, available [SVG, PNG], default PNG.'
             <bam> 'Input bam file.'
             ",
         )
         .get_matches();
     let bam: &str = opts.value_of("bam").ok_or_else(opterr)?;
     let pic: &str = opts.value_of("pic").ok_or_else(opterr)?;
-    let format: PicFormat = opts
-        .value_of("format")
-        .map_or(Ok(PicFormat::PNG), PicFormat::from_str)?;
+    let format: PicFormat = PicFormat::from_str(pic)?;
     let upper: usize = opts
         .value_of("upper")
         .unwrap_or("500")
