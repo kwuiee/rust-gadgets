@@ -26,6 +26,18 @@ ARGS:
     <bam>    Input bam file.
 ```
 
+Run test case with PNG output.
+
+```
+insize -o insert-size.png test.bam
+```
+
+SVG is also supported.
+
+```shell
+insize -o insert-size.svg tests/test.bam
+```
+
 ## Benchmark
 
 ~ 20s/Gb

@@ -304,11 +304,6 @@ fn cli(bam: &str, pic: &str, upper: &usize, format: &PicFormat) -> Result<()> {
             Page::single(&view)
                 .save(pic)
                 .map_err(|_| Error::new(InvalidData, format!("Failed to write {}", pic)))?;
-
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&sum).map_err(|e| Error::new(InvalidData, e))?
-            );
         }
         PicFormat::PNG => {
             let root = BitMapBackend::new(pic, (700, 610)).into_drawing_area();
@@ -351,6 +346,11 @@ fn cli(bam: &str, pic: &str, upper: &usize, format: &PicFormat) -> Result<()> {
                 .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         }
     }
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&sum).map_err(|e| Error::new(InvalidData, e))?
+    );
     Ok(())
 }
 

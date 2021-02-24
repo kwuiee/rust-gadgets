@@ -3,7 +3,7 @@ name = "insize"
 version = "0.1.0"
 authors = ["slyo <sean.lyo@outlook.com>"]
 edition = "2018"
-description = "Fast insert size distribution plot."
+description = "Fast insert size distribution plot from bam."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
