@@ -375,6 +375,7 @@ fn main() -> Result<()> {
     let opts = App::new(crate_name!())
         .author(crate_authors!())
         .about(crate_description!())
+        .version(crate_version!())
         .setting(AppSettings::ArgRequiredElseHelp)
         .args_from_usage(
             "

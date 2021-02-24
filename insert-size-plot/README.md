@@ -7,9 +7,9 @@ Insert size stats and plot.
 Help message
 
 ```shell
-insize
+insize 0.1.0
 slyo <sean.lyo@outlook.com>
-Insert size(template length) consensus with little memory.
+Fast insert size distribution plot from bam.
 
 USAGE:
     insize [OPTIONS] <bam> -o <FILE>
@@ -19,11 +19,12 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
-    -o <FILE>          Output svg file path.
-    -m <NUMBER>        Maximum insert size to record. Bigger number costs more memory.
+    -o <FILE>          Output pic file path, support `.svg` and `.png` suffix.
+    -m <NUMBER>        Maximum insert size to record, default 500. !Bigger number costs more memory!.
 
 ARGS:
     <bam>    Input bam file.
+
 ```
 
 Run test case with PNG output.
