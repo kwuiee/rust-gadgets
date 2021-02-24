@@ -1,6 +1,6 @@
 # rust-gadgets
 
-Gadgets collection written in rust.
+Gadgets collection written in rust. Usually less than 200 lines.
 
 ## List
 
@@ -10,3 +10,4 @@ Gadgets collection written in rust.
 - fastq-merge: Merge fastq pairs in a directory into one pair.
 - fastq-check: Fastq format check and quantity count.
 - splitted-dicordant-extract: Extract splitted and discordant reads from sam/bam according to [lumpy](https://github.com/arq5x/lumpy-sv).
+
