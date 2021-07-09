@@ -1,0 +1,17 @@
+[package]
+name = "tsv-split"
+version = "0.1.0"
+edition = "2018"
+authors = ["slyo <sean.lyo@outlook.com>"]
+description = "Split tsv file on header."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+csv = "^1.1"
+clap = "=3.0.0-beta.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
