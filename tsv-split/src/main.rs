@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .has_headers(true)
         .from_path(&opts.input)?;
     let mut writers: HashMap<String, CsvWriter<File>> = HashMap::new();
-    let header = reader.headers()?.to_owned();
+    let headers = reader.headers()?.to_owned();
     for rec in reader.deserialize() {
         let rec: Row = rec?;
         let part: String = rec
@@ -56,10 +56,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .buffer_capacity(1 << 22)
                 .from_path(format!("{}/{}.{}.{}", &opts.outdir, prefix, part, ext))
                 .unwrap();
-            nw.write_record(&header).unwrap();
+            nw.write_record(&headers).unwrap();
             nw
         });
-        writer.write_record(rec.values())?;
+        writer.write_record(headers.iter().map(|v| &rec[v]).collect::<Vec<&String>>())?;
     }
     for i in writers.values_mut() {
         i.flush()?;
