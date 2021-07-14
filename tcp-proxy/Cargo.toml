@@ -1,0 +1,16 @@
+[package]
+name = "proxy"
+version = "0.1.0"
+edition = "2018"
+description = "Code from https://github.com/ZekeMedley/tcp-proxy"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+clap = "2.33.3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
