@@ -10,3 +10,8 @@ description = "Explain sam flags according to https://broadinstitute.github.io/p
 [dependencies]
 lazy_static = "^1.4.0"
 colored = "^2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"

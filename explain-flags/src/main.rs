@@ -6,7 +6,7 @@ use std::env;
 
 use colored::*;
 
-/// [Explanation source](https://broadinstitute.github.io/picard/explain-flags.html)
+// [Explanation source](https://broadinstitute.github.io/picard/explain-flags.html)
 lazy_static! {
     static ref EXPLAINS: BTreeMap<u16, &'static str> = {
         let mut m = BTreeMap::new();
@@ -36,13 +36,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             (0, Some(v)) => println!("{} {}", "[\u{2717}]".bold(), v.red().bold()),
             _ => {}
         };
-        s = s / 2;
+        s /= 2;
         d += 1;
     }
     for i in d..=*BITS {
-        match EXPLAINS.get(&2u16.pow(i)) {
-            Some(v) => println!("{} {}", "[\u{2717}]".bold(), v.red().bold()),
-            _ => {}
+        if let Some(v) = EXPLAINS.get(&2u16.pow(i)) {
+            println!("{} {}", "[\u{2717}]".bold(), v.red().bold());
         };
     }
     Ok(())
