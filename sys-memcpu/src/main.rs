@@ -11,13 +11,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     refresh.with_cpu();
     refresh.with_memory();
     let mut sys = System::new_with_specifics(refresh);
+    sys.refresh_all();
+    let totalnt = sys.physical_core_count().unwrap_or(0);
+    let totalmem = sys.total_memory();
     loop {
-        sys.refresh_all();
         println!(
-            "cpu: {}%, memory: {}KB.",
+            "cpu: {:.2}%*{}nt, memory: {}/{}KB.",
             sys.global_processor_info().cpu_usage(),
+            totalnt,
             sys.used_memory(),
+            totalmem,
         );
         thread::sleep(Duration::from_secs(5));
+        sys.refresh_all();
     }
 }
